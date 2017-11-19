@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"io/ioutil"
 )
 
 type (
@@ -59,29 +60,27 @@ type (
 		Notebook Notebook
 		Username string
 		Password string
-		Endpoint string
+		Endpoint string `json:"filePath" validate:"required"`
 	}
 
 	Notebook struct {
-		Id          int    `json:"-,omitempty"`
+		Id          string    `json:"-,omitempty"`
 		Name        string `json:"name" validate:"required"`
-		Description string `json:"description" validate:"required"`
-		Protocol    string `json:"protocol" validate:"required"`
-		State       string `json:"-" validate:"required"`
+		FilePath	string `json:"filePath" validate:"required"`
+		State       string `json:"filePath" validate:"required"`
 	}
 )
 
 type (
 	NotebookResponse struct {
 		Message string         `json:"message"`
-		Status  int            `json:"status"`
-		Data    []NotebookData `json:"data,omitempty"`
+		Status  string            `json:"status"`
+		Data    []NotebookData `json:"body,omitempty"`
 	}
 
 	NotebookData struct {
-		Id   int
+		Id   string
 		Name string
-		Ip   string
 	}
 )
 
@@ -106,9 +105,9 @@ func (p *Plugin) Exec() error {
 		createNotebook(&p.Config)
 	} else if p.Config.Notebook.State == "present" {
 		Infof("Notebook already present: %s", p.Config.Notebook.Name)
-		Infof("Your notebook id: %d", p.Config.Notebook.Id)
+		Infof("Your notebook id: %s", p.Config.Notebook.Id)
 	} else if p.Config.Notebook.State == "absent" && notebookExists(&p.Config) == true {
-		Infof("Your notebook id: %d", p.Config.Notebook.Id)
+		Infof("Your notebook id: %s", p.Config.Notebook.Id)
 		deleteNotebook(&p.Config)
 	} else if p.Config.Notebook.State == "absent" {
 		Infof("Notebook %s doesn't exists or already deleted, nothing to do ", p.Config.Notebook.Name)
@@ -147,7 +146,7 @@ func apiCall(url string, method string, username string, password string, body i
 }
 
 func settingUpNotebookId(config *Config) {
-	url := fmt.Sprintf("%s/notebook", config.Endpoint)
+	url := fmt.Sprintf("%s/api/notebook", config.Endpoint)
 	resp := apiCall(url, "GET", config.Username, config.Password, nil)
 
 	result := NotebookResponse{}
@@ -162,16 +161,17 @@ func settingUpNotebookId(config *Config) {
 	for _, notebook := range result.Data {
 		if notebook.Name == config.Notebook.Name {
 			config.Notebook.Id = notebook.Id
+			Infof("Notebook id: %s", config.Notebook.Id)
 		}
 	}
 }
 
 func deleteNotebook(config *Config) bool {
 	Infof("Delete %s notebook\n", config.Notebook.Name)
-	url := fmt.Sprintf("%s/notebooks/%d", config.Endpoint, config.Notebook.Id)
+	url := fmt.Sprintf("%s/api/notebook/%s", config.Endpoint, config.Notebook.Id)
 	resp := apiCall(url, "DELETE", config.Username, config.Password, nil)
 
-	if resp.StatusCode == 201 {
+	if resp.StatusCode == 200 {
 		Infof("Notebook (%s) will be deleted", config.Notebook.Name)
 		return true
 	}
@@ -189,11 +189,16 @@ func createNotebook(config *Config) bool {
 
 	Infof("Create %s notebook", config.Notebook.Name)
 
-	url := fmt.Sprintf("%s/notebooks", config.Endpoint)
-	param, _ := json.Marshal(config.Notebook)
-	resp := apiCall(url, "POST", config.Username, config.Password, bytes.NewBuffer(param))
+	notebookData, err := ioutil.ReadFile(config.Notebook.FilePath)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Print(string(notebookData))
 
-	if resp.StatusCode == 201 {
+	url := fmt.Sprintf("%s/api/notebook/import", config.Endpoint)
+	resp := apiCall(url, "POST", config.Username, config.Password, bytes.NewBuffer(notebookData))
+
+	if resp.StatusCode == 200 {
 		Infof("Notebook (%s) will be installed", config.Notebook.Name)
 		return true
 	}
@@ -203,7 +208,7 @@ func createNotebook(config *Config) bool {
 }
 
 func notebookExists(config *Config) bool {
-	if config.Notebook.Id > 0 {
+	if config.Notebook.Id != "" {
 		return true
 	}
 	return false

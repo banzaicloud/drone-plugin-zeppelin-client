@@ -204,38 +204,33 @@ func main() {
 		cli.StringFlag{
 			Name:   "plugin.endpoint",
 			Usage:  "Zeppelin Url",
-			EnvVar: "ZEPPELIN_ENDPOINT",
+			EnvVar: "PLUGIN_ZEPPELIN_ENDPOINT",
 			Value:  "/zeppelin",
 		},
 		cli.StringFlag{
 			Name:   "plugin.username",
 			Usage:  "API Username",
-			EnvVar: "ZEPPELIN_USERNAME",
+			EnvVar: "PLUGIN_ZEPPELIN_USERNAME",
 		},
 		cli.StringFlag{
 			Name:   "plugin.password",
 			Usage:  "API Password",
-			EnvVar: "ZEPPELIN_PASSWORD",
+			EnvVar: "PLUGIN_ZEPPELIN_PASSWORD",
 		},
 		cli.StringFlag{
 			Name:   "plugin.notebook.name",
 			Usage:  "K8S Cluster name",
-			EnvVar: "ZEPPELIN_NOTEBOOK_NAME",
+			EnvVar: "PLUGIN_ZEPPELIN_NOTEBOOK_NAME",
 		},
 		cli.StringFlag{
-			Name:   "plugin.notebook.description",
+			Name:   "plugin.notebook.filePath",
 			Usage:  "K8S Cluster name",
-			EnvVar: "ZEPPELIN_NOTEBOOK_DESCRIPTION",
+			EnvVar: "PLUGIN_ZEPPELIN_NOTEBOOK_FILE_PATH",
 		},
 		cli.StringFlag{
 			Name:   "plugin.notebook.state",
 			Usage:  "K8S Cluster name",
-			EnvVar: "ZEPPELIN_NOTEBOOK_STATE",
-		},
-		cli.StringFlag{
-			Name:   "plugin.notebook.protocol",
-			Usage:  "K8S Cluster name",
-			EnvVar: "ZEPPELIN_NOTEBOOK_PROTOCOL",
+			EnvVar: "PLUGIN_ZEPPELIN_NOTEBOOK_STATE",
 		},
 		cli.StringFlag{
 			Name:   "plugin.log.level",
@@ -293,9 +288,8 @@ func run(c *cli.Context) error {
 			Password: c.String("plugin.password"),
 			Notebook: Notebook{
 				Name:        c.String("plugin.notebook.name"),
-				Description: c.String("plugin.notebook.description"),
-				Protocol:    c.String("plugin.notebook.protocol"),
-				State:       c.String("plugin.notebook.state"),
+				FilePath: 	 c.String("plugin.notebook.filePath"),
+				State: 	 	 c.String("plugin.notebook.state"),
 			},
 		},
 	}
