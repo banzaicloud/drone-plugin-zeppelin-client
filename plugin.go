@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"io/ioutil"
+	"github.com/oliveagle/jsonpath"
 )
 
 type (
@@ -64,56 +65,20 @@ type (
 	}
 
 	Notebook struct {
-		Id          string    `json:"-,omitempty"`
+		Id          string `json:"-,omitempty"`
 		Name        string `json:"name" validate:"required"`
 		FilePath	string `json:"filePath" validate:"required"`
 		State       string `json:"filePath" validate:"required"`
 	}
 )
 
-type (
-	NotebookResponse struct {
-		Message string         `json:"message"`
-		Status  string            `json:"status"`
-		Data    []NotebookData `json:"body,omitempty"`
-	}
-
-	NotebookData struct {
-		Id   string
-		Name string
-	}
-)
-
 var validate *validator.Validate
 
-func (p *Plugin) Exec() error {
-	validate = validator.New()
-
-	err := validate.Struct(p)
-	if err != nil {
-		for _, v := range err.(validator.ValidationErrors) {
-			Errorf("[%s] field validation error (%+v)", v.Field(), v)
-		}
-		return nil
+func notebookExists(config *Config) bool {
+	if config.Notebook.Id != "" {
+		return true
 	}
-
-	Infof("Notebook desired state: %s", p.Config.Notebook.State)
-	settingUpNotebookId(&p.Config)
-
-	//if notebook exists
-	if p.Config.Notebook.State == "present" && notebookExists(&p.Config) == false {
-		createNotebook(&p.Config)
-	} else if p.Config.Notebook.State == "present" {
-		Infof("Notebook already present: %s", p.Config.Notebook.Name)
-		Infof("Your notebook id: %s", p.Config.Notebook.Id)
-	} else if p.Config.Notebook.State == "absent" && notebookExists(&p.Config) == true {
-		Infof("Your notebook id: %s", p.Config.Notebook.Id)
-		deleteNotebook(&p.Config)
-	} else if p.Config.Notebook.State == "absent" {
-		Infof("Notebook %s doesn't exists or already deleted, nothing to do ", p.Config.Notebook.Name)
-	}
-
-	return nil
+	return false
 }
 
 func apiCall(url string, method string, username string, password string, body io.Reader) *http.Response {
@@ -145,11 +110,24 @@ func apiCall(url string, method string, username string, password string, body i
 	return resp
 }
 
-func settingUpNotebookId(config *Config) {
+func lookupNotebookId(config *Config) {
 	url := fmt.Sprintf("%s/api/notebook", config.Endpoint)
 	resp := apiCall(url, "GET", config.Username, config.Password, nil)
 
-	result := NotebookResponse{}
+	type (
+		NotebookData struct {
+			Id   string
+			Name string
+		}
+
+		GetNotebooksResponse struct {
+			Message string         `json:"message"`
+			Status  string         `json:"status"`
+			Data    []NotebookData `json:"body,omitempty"`
+		}
+	)
+
+	result := GetNotebooksResponse{}
 	if resp.StatusCode == 200 {
 		err := json.NewDecoder(resp.Body).Decode(&result)
 
@@ -161,18 +139,23 @@ func settingUpNotebookId(config *Config) {
 	for _, notebook := range result.Data {
 		if notebook.Name == config.Notebook.Name {
 			config.Notebook.Id = notebook.Id
-			Infof("Notebook id: %s", config.Notebook.Id)
+			Infof("Notebook %s found with id: %s", config.Notebook.Name, config.Notebook.Id)
 		}
+	}
+
+	if config.Notebook.Id == "" {
+		Infof("Notebook not found with name: %s", config.Notebook.Name)
 	}
 }
 
 func deleteNotebook(config *Config) bool {
-	Infof("Delete %s notebook\n", config.Notebook.Name)
+	Infof("Deleting notebook ...")
 	url := fmt.Sprintf("%s/api/notebook/%s", config.Endpoint, config.Notebook.Id)
 	resp := apiCall(url, "DELETE", config.Username, config.Password, nil)
 
 	if resp.StatusCode == 200 {
-		Infof("Notebook (%s) will be deleted", config.Notebook.Name)
+		Infof("Notebook %s (%s) has been deleted", config.Notebook.Name, config.Notebook.Id)
+		config.Notebook.Id = ""
 		return true
 	}
 
@@ -185,21 +168,26 @@ func deleteNotebook(config *Config) bool {
 	return false
 }
 
-func createNotebook(config *Config) bool {
+func importNotebook(config *Config) bool {
 
-	Infof("Create %s notebook", config.Notebook.Name)
-
+	Infof("Importing notebook ...")
 	notebookData, err := ioutil.ReadFile(config.Notebook.FilePath)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Print(string(notebookData))
 
 	url := fmt.Sprintf("%s/api/notebook/import", config.Endpoint)
 	resp := apiCall(url, "POST", config.Username, config.Password, bytes.NewBuffer(notebookData))
 
 	if resp.StatusCode == 200 {
-		Infof("Notebook (%s) will be installed", config.Notebook.Name)
+		//var result = map[string] string{}
+		result := map[string] string{}
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			Fatalf("failed to parse /api/notebook/import to go struct: %+v", err)
+		}
+		config.Notebook.Id = result["body"]
+		Infof("Notebook %s has been imported with id: %s", config.Notebook.Name, config.Notebook.Id)
 		return true
 	}
 
@@ -207,9 +195,94 @@ func createNotebook(config *Config) bool {
 	return false
 }
 
-func notebookExists(config *Config) bool {
-	if config.Notebook.Id != "" {
+func createNotebook(p *Plugin) bool {
+
+	if notebookExists(&p.Config) == false {
+		importNotebook(&p.Config)
+	} else {
+		if notebookInProgress(&p.Config) == false {
+			Infof("Notebook %s (%s) already exists with same name, will be recreated",
+				p.Config.Notebook.Name, p.Config.Notebook.Id)
+			deleteNotebook(&p.Config)
+			importNotebook(&p.Config)
+		} else {
+			Infof("Notebook %s (%s) already exists with same name and is in progress",
+				p.Config.Notebook.Name, p.Config.Notebook.Id)
+			return false;
+		}
+	}
+	return true;
+
+}
+
+func runNotebook(config *Config) bool {
+
+	Infof("Running notebook ...")
+	url := fmt.Sprintf("%s/api/notebook/job/%s?waitToFinish=false", config.Endpoint, config.Notebook.Id)
+	resp := apiCall(url, "POST", config.Username, config.Password, nil)
+
+	if resp.StatusCode == 200 {
+		Infof("Notebook %s (%s) has been started", config.Notebook.Name, config.Notebook.Id)
 		return true
 	}
+	Fatalf("Unexpected error %+v", resp)
 	return false
+}
+
+func notebookInProgress(config *Config) bool {
+
+	Infof("Checking notebook status ...")
+	url := fmt.Sprintf("%s/api/notebook/job/%s", config.Endpoint, config.Notebook.Id)
+	resp := apiCall(url, "GET", config.Username, config.Password, nil)
+	if resp.StatusCode != 200 {
+		return false
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	var jsonData interface{}
+	json.Unmarshal(data, &jsonData)
+
+	res, err := jsonpath.JsonPathLookup(jsonData, "$.body[?(@.progress < 100)].status")
+	if err != nil {
+		Fatalf("failed to lookup path in json: %s", err)
+	}
+
+	var inProgress = false
+	if len(res.([]interface{})) > 0 {
+		inProgress = true
+	}
+	Infof("Notebook %s (%s) is in progress: %t", config.Notebook.Name, config.Notebook.Id, inProgress)
+	return inProgress
+}
+
+func (p *Plugin) Exec() error {
+	validate = validator.New()
+
+	err := validate.Struct(p)
+	if err != nil {
+		for _, v := range err.(validator.ValidationErrors) {
+			Errorf("[%s] field validation error (%+v)", v.Field(), v)
+		}
+		return nil
+	}
+
+	Infof("Notebook desired state: %s", p.Config.Notebook.State)
+	lookupNotebookId(&p.Config)
+
+	switch p.Config.Notebook.State {
+	case "present" :
+		createNotebook(p)
+	case "running" :
+		// run notebook if has been successfully created
+		if createNotebook(p) == true {
+			runNotebook(&p.Config)
+		}
+	case "absent"  :
+		if notebookExists(&p.Config) == true {
+			deleteNotebook(&p.Config)
+		} else if p.Config.Notebook.State == "absent" {
+			Infof("Notebook %s doesn't exists, nothing to do ", p.Config.Notebook.Name)
+		}
+	}
+
+	return nil
 }
