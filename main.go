@@ -204,7 +204,7 @@ func main() {
 		cli.StringFlag{
 			Name:   "plugin.endpoint",
 			Usage:  "Zeppelin Url",
-			EnvVar: "PLUGIN_ZEPPELIN_ENDPOINT",
+			EnvVar: "PLUGIN_ENDPOINT",
 			Value:  "/zeppelin",
 		},
 		cli.StringFlag{
@@ -220,17 +220,17 @@ func main() {
 		cli.StringFlag{
 			Name:   "plugin.notebook.name",
 			Usage:  "K8S Cluster name",
-			EnvVar: "PLUGIN_ZEPPELIN_NOTEBOOK_NAME",
+			EnvVar: "PLUGIN_NOTEBOOK_NAME",
 		},
 		cli.StringFlag{
 			Name:   "plugin.notebook.filePath",
 			Usage:  "K8S Cluster name",
-			EnvVar: "PLUGIN_ZEPPELIN_NOTEBOOK_FILE_PATH",
+			EnvVar: "PLUGIN_NOTEBOOK_FILE_PATH",
 		},
 		cli.StringFlag{
 			Name:   "plugin.notebook.state",
 			Usage:  "K8S Cluster name",
-			EnvVar: "PLUGIN_ZEPPELIN_NOTEBOOK_STATE",
+			EnvVar: "PLUGIN_NOTEBOOK_STATE",
 		},
 		cli.StringFlag{
 			Name:   "plugin.log.level",
