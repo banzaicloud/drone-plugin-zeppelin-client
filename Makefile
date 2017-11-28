@@ -1,4 +1,4 @@
-EXECUTABLE ?= pipeline_client
+EXECUTABLE ?= zeppelin_client
 IMAGE ?= banzaicloud/$(EXECUTABLE)
 COMMIT ?= $(shell git rev-parse --short HEAD)
 

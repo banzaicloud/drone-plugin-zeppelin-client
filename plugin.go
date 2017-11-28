@@ -269,17 +269,17 @@ func (p *Plugin) Exec() error {
 	lookupNotebookId(&p.Config)
 
 	switch p.Config.Notebook.State {
-	case "present" :
+	case "created" :
 		createNotebook(p)
 	case "running" :
 		// run notebook if has been successfully created
 		if createNotebook(p) == true {
 			runNotebook(&p.Config)
 		}
-	case "absent"  :
+	case "deleted"  :
 		if notebookExists(&p.Config) == true {
 			deleteNotebook(&p.Config)
-		} else if p.Config.Notebook.State == "absent" {
+		} else {
 			Infof("Notebook %s doesn't exists, nothing to do ", p.Config.Notebook.Name)
 		}
 	}
