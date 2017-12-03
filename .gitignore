@@ -20,3 +20,4 @@
 .idea
 .env
 drone-plugin-zeppelin-client
+zeppelin-client

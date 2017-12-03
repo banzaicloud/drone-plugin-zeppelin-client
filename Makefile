@@ -1,8 +1,8 @@
-EXECUTABLE ?= zeppelin_client
+EXECUTABLE ?= zeppelin-client
 IMAGE ?= banzaicloud/$(EXECUTABLE)
-COMMIT ?= $(shell git rev-parse --short HEAD)
+TAG ?= $(shell git describe --tags --abbrev=0)
 
-LD_FLAGS = -X "main.version=$(COMMIT)"
+LD_FLAGS = -X "main.version=$(TAG)"
 PACKAGES = $(shell go list ./... | grep -v /vendor/)
 
 .PHONY: _no-target-specified
@@ -30,11 +30,11 @@ vet:
 docker:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-s -w $(LD_FLAGS)' -o $(EXECUTABLE)
 	docker build --rm -t $(IMAGE) .
-	docker tag $(IMAGE):latest $(IMAGE):$(COMMIT)
+	docker tag $(IMAGE):latest $(IMAGE):$(TAG)
 
 push:
 	docker push $(IMAGE):latest
-	docker push $(IMAGE):$(COMMIT)
+	docker push $(IMAGE):$(TAG)
 
 $(EXECUTABLE): $(wildcard *.go)
 	go build -ldflags '-s -w $(LD_FLAGS)' -o $(EXECUTABLE)

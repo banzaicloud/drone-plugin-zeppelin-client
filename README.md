@@ -1,22 +1,43 @@
+
 ## Zeppelin API client plugin for Drone
 
-Zeppelin Notebook REST API client plugin for Drone. A step in the Pipeline PaaS CI/CD component to create / update / delete / run Zeppelin notebooks.
+Zeppelin REST API client plugin for Drone. A step in the Pipeline PaaS CI/CD component to provision a Kubernetes cluster or use a managed one.
 
 ### Example drone config
 
 .drone.yml
 
     pipeline:
-      zeppelin:
-        image: banzaicloud/pipeline_zeppelin_client:latest
+      cluster:
+        image: banzaicloud/zeppelin-client:latest
 
-        endpoint: http://[your-host-name-or-ip]/zeppelin
-        zeppelin_username: admin
-        zeppelin_password: *****
         log_level: info
-        notebook_name: "sf-police-incidents"
-        notebook_file_path: "sf_police_incidents.note.json"
-        notebook_state: "running"
+        log_format: text
+
+        cluster_name: "demo-cluster1"
+        cluster_location: "eu-west-1"
+        cluster_state: "created"
+
+        node_image: ami-294ffd50
+        node_instance_type: m4.xlarge
+
+        master_image: ami-294ffd50
+        master_instance_type: m4.xlarge
+
+        deployment_name: ""
+        deployment_release_name: ""
+        deployment_state: "created"
+        secrets [ plugin_endpoint, plugin_username, plugin_password ]
+
+### Set these secrets on the CI UI environment.
+
+#### URL for pipeline api
+    plugin_endpoint: http://[host]/pipeline/api/v1
+
+#### Credentials for pipeline api
+
+    plugin_username
+    plugin_password
 
 ## Test container/plugin with drone exec
 
@@ -26,17 +47,11 @@ Zeppelin Notebook REST API client plugin for Drone. A step in the Pipeline PaaS 
 
     make docker
 
-## For dev env push .env file
+## For developers
+### Use .env file (example)
 
-.env
-
-    PLUGIN_ENDPOINT=http://[your-host-name-or-ip]/zeppelin
-    PLUGIN_ZEPPELIN_USERNAME=admin
-    PLUGIN_ZEPPELIN_PASSWORD=***
-    PLUGIN_NOTEBOOK_NAME="example-notebook"
-    PLUGIN_NOTEBOOK_FILE_PATH="example.note.json"
-    PLUGIN_NOTEBOOK_STATE="created/running/deleted"
-    PLUGIN_LOG_LEVEL=debug
+    cp .env.example .env
+    source .env
 
 ### Test with `go run`
 

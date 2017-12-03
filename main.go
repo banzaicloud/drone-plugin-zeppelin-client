@@ -287,9 +287,9 @@ func run(c *cli.Context) error {
 			Username: c.String("plugin.username"),
 			Password: c.String("plugin.password"),
 			Notebook: Notebook{
-				Name:        c.String("plugin.notebook.name"),
-				FilePath: 	 c.String("plugin.notebook.filePath"),
-				State: 	 	 c.String("plugin.notebook.state"),
+				Name:     c.String("plugin.notebook.name"),
+				FilePath: c.String("plugin.notebook.filePath"),
+				State:    c.String("plugin.notebook.state"),
 			},
 		},
 	}
