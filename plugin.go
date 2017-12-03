@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/oliveagle/jsonpath"
 	"gopkg.in/go-playground/validator.v9"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
-	"io/ioutil"
-	"github.com/oliveagle/jsonpath"
 )
 
 type (
@@ -61,14 +61,14 @@ type (
 		Notebook Notebook
 		Username string
 		Password string
-		Endpoint string `json:"filePath" validate:"required"`
+		Endpoint string `json:"endpoint" validate:"required"`
 	}
 
 	Notebook struct {
-		Id          string `json:"-,omitempty"`
-		Name        string `json:"name" validate:"required"`
-		FilePath	string `json:"filePath" validate:"required"`
-		State       string `json:"filePath" validate:"required"`
+		Id       string `json:"-,omitempty"`
+		Name     string `json:"name" validate:"required"`
+		FilePath string `json:"filePath" validate:"required"`
+		State    string `json:"state" validate:"required"`
 	}
 )
 
@@ -181,7 +181,7 @@ func importNotebook(config *Config) bool {
 
 	if resp.StatusCode == 200 {
 		//var result = map[string] string{}
-		result := map[string] string{}
+		result := map[string]string{}
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
 			Fatalf("failed to parse /api/notebook/import to go struct: %+v", err)
@@ -208,10 +208,10 @@ func createNotebook(p *Plugin) bool {
 		} else {
 			Infof("Notebook %s (%s) already exists with same name and is in progress",
 				p.Config.Notebook.Name, p.Config.Notebook.Id)
-			return false;
+			return false
 		}
 	}
-	return true;
+	return true
 
 }
 
@@ -269,14 +269,14 @@ func (p *Plugin) Exec() error {
 	lookupNotebookId(&p.Config)
 
 	switch p.Config.Notebook.State {
-	case "created" :
+	case "present":
 		createNotebook(p)
-	case "running" :
+	case "running":
 		// run notebook if has been successfully created
 		if createNotebook(p) == true {
 			runNotebook(&p.Config)
 		}
-	case "deleted"  :
+	case "absent":
 		if notebookExists(&p.Config) == true {
 			deleteNotebook(&p.Config)
 		} else {
