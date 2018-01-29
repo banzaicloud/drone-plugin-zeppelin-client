@@ -1,58 +1,42 @@
 
 ## Zeppelin API client plugin for Drone
 
-Zeppelin REST API client plugin for Drone. A step in the Pipeline PaaS CI/CD component to provision a Kubernetes cluster or use a managed one.
+Zeppelin REST API client plugin for Drone. A step in the Pipeline PaaS CI/CD component to create / update / delete and also run a Zeppelin notebook via Zeppelin's REST API.
+You had to specify desired state of Zeppelin notebook in zeppelin_notebook_state option.
+These are the valid states:
 
-### Example drone config
+- present - notebook will created or updated
+- absent - notebook will be deleted if exists
+- running - notebook will be created or updated and started
 
-.drone.yml
+#### Specify required secrets
 
-    pipeline:
-      cluster:
-        image: banzaicloud/zeppelin-client:latest
+Provide valid credentials for the pipeline API.
 
-        log_level: info
-        log_format: text
+These options needs to be specified in the CI/CD [GUI](https://github.com/banzaicloud/pipeline/blob/master/docs/pipeline-howto.md#cicd-secrets).
 
-        cluster_name: "demo-cluster1"
-        cluster_location: "eu-west-1"
-        cluster_state: "created"
+* plugin_zeppelin_username: Zeppelin username
+* plugin_zeppelin_password: Zeppelin password
 
-        node_image: ami-294ffd50
-        node_instance_type: m4.xlarge
+### Main options
 
-        master_image: ami-294ffd50
-        master_instance_type: m4.xlarge
+| Option                       | Description                                    | Default  | Required |
+| -------------                | -----------------------                        | --------:| --------:|
+| zeppelin_notebook_name       | Name of the notebook to be created / updated   | ""       | Yes       |
+| zeppelin_notebook_file_path  | Path to notebook file                          | ""       | Yes       |
+| zeppelin_notebook_state      | Desired state of notebook                      | ""       | Yes       |
+| zeppelin_endpoint            | Zeppelin REST API endpoint to use              | ""       | Yes       |
 
-        deployment_name: ""
-        deployment_release_name: ""
-        deployment_state: "created"
-        secrets [ plugin_endpoint, plugin_username, plugin_password ]
+### Example YAML
 
-### Set these secrets on the CI UI environment.
+```
+run:
+    image: banzaicloud/k8s-proxy:0.1.0
+    original_image: banzaicloud/zeppelin-client:0.1.0
+    zeppelin_notebook_name: "sf-police-incidents"
+    zeppelin_notebook_file_path: "sf_police_incidents.note.json"
+    zeppelin_notebook_state: "running"
+    zeppelin_endpoint: "http://release-1-zeppelin:8080/zeppelin"
 
-#### URL for pipeline api
-    plugin_endpoint: http://[host]/pipeline/api/v1
-
-#### Credentials for pipeline api
-
-    plugin_username
-    plugin_password
-
-## Test container/plugin with drone exec
-
-    drone exec --repo-name hello-world --workspace-path drone-test .drone.yml
-
-## Build new docker image
-
-    make docker
-
-## For developers
-### Use .env file (example)
-
-    cp .env.example .env
-    source .env
-
-### Test with `go run`
-
-    go run -ldflags "-X main.version=1.0" main.go plugin.go log.go --plugin.log.level debug --plugin.log.format text
+    secrets: [ plugin_zeppelin_username, plugin_zeppelin_password ]
+```
