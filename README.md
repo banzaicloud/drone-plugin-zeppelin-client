@@ -1,7 +1,7 @@
 
-## Zeppelin API client plugin for Drone
+## Zeppelin API client plugin for CI/CD workflow
 
-Zeppelin REST API client plugin for Drone. A step in the Pipeline PaaS CI/CD component to create / update / delete and also run a Zeppelin notebook via Zeppelin's REST API.
+Zeppelin REST API client plugin for CI/CD workflow. A step in the Pipeline PaaS CI/CD component to create / update / delete and also run a Zeppelin notebook via Zeppelin's REST API.
 You had to specify desired state of Zeppelin notebook in zeppelin_notebook_state option.
 These are the valid states:
 
@@ -31,8 +31,8 @@ These options needs to be specified in the CI/CD [GUI](https://github.com/banzai
 
 ```
 run:
-    image: banzaicloud/k8s-proxy:0.1.0
-    original_image: banzaicloud/zeppelin-client:0.1.0
+    image: banzaicloud/k8s-proxy:0.2.0
+    original_image: banzaicloud/zeppelin-client:0.2.0
     zeppelin_notebook_name: "sf-police-incidents"
     zeppelin_notebook_file_path: "sf_police_incidents.note.json"
     zeppelin_notebook_state: "running"
@@ -40,3 +40,6 @@ run:
 
     secrets: [ plugin_zeppelin_username, plugin_zeppelin_password ]
 ```
+
+For a full example of provisioning Zeppelin Server then run a notebook on it checkout [Zeppelin PDI example](). 
+Are you a developer? Click [here](dev.md)
