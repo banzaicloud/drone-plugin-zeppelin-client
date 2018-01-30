@@ -42,4 +42,5 @@ run:
 ```
 
 For a full example of provisioning Zeppelin Server then run a notebook on it checkout [Zeppelin PDI example](https://github.com/banzaicloud/zeppelin-pdi-example).
+
 Are you a developer? Click [here](dev.md)
