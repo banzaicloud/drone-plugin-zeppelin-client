@@ -22,10 +22,10 @@ These options needs to be specified in the CI/CD [GUI](https://github.com/banzai
 
 | Option                       | Description                                    | Default  | Required |
 | -------------                | -----------------------                        | --------:| --------:|
-| zeppelin_notebook_name       | Name of the notebook to be created / updated   | ""       | Yes       |
-| zeppelin_notebook_file_path  | Path to notebook file                          | ""       | Yes       |
-| zeppelin_notebook_state      | Desired state of notebook                      | ""       | Yes       |
-| zeppelin_endpoint            | Zeppelin REST API endpoint to use              | ""       | Yes       |
+| notebook_name       | Name of the notebook to be created / updated   | ""       | Yes       |
+| notebook_file_path  | Path to notebook file                          | ""       | Yes       |
+| notebook_state      | Desired state of notebook                      | ""       | Yes       |
+| endpoint            | Zeppelin REST API endpoint to use              | ""       | Yes       |
 
 ### Example YAML
 
@@ -33,10 +33,10 @@ These options needs to be specified in the CI/CD [GUI](https://github.com/banzai
 run:
     image: banzaicloud/k8s-proxy:0.2.0
     original_image: banzaicloud/zeppelin-client:0.2.0
-    zeppelin_notebook_name: "sf-police-incidents"
-    zeppelin_notebook_file_path: "sf_police_incidents.note.json"
-    zeppelin_notebook_state: "running"
-    zeppelin_endpoint: "http://release-1-zeppelin:8080/zeppelin"
+    notebook_name: "sf-police-incidents"
+    notebook_file_path: "sf_police_incidents.note.json"
+    notebook_state: "running"
+    endpoint: "http://release-1-zeppelin:8080/zeppelin"
 
     secrets: [ plugin_zeppelin_username, plugin_zeppelin_password ]
 ```
