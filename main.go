@@ -27,8 +27,8 @@ func main() {
 	app.Flags = []cli.Flag{
 
 		cli.StringFlag{
-			Name:   "plugin.endpoint",
-			Usage:  "Zeppelin Url",
+			Name:   "plugin.zeppelin.endpoint",
+			Usage:  "Zeppelin endpoint",
 			EnvVar: "PLUGIN_ZEPPELIN_ENDPOINT",
 			Value:  "/zeppelin",
 		},
@@ -49,7 +49,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "plugin.notebook.filePath",
-			Usage:  "The path to the zepplein notebook",
+			Usage:  "The path to the zeppelin notebook",
 			EnvVar: "PLUGIN_NOTEBOOK_FILE_PATH",
 		},
 		cli.StringFlag{
@@ -77,7 +77,7 @@ func run(c *cli.Context) error {
 	plugin := Plugin{
 
 		Config: Config{
-			Endpoint: c.String("plugin.endpoint"),
+			Endpoint: c.String("plugin.zeppelin.endpoint"),
 			Username: c.String("plugin.username"),
 			Password: c.String("plugin.password"),
 			Notebook: Notebook{
@@ -110,6 +110,6 @@ func processLogLevel(c *cli.Context) {
 	case "PANIC":
 		log.SetLevel(log.PanicLevel)
 	default:
-		log.SetLevel(log.DebugLevel)
+		log.SetLevel(log.InfoLevel)
 	}
 }

@@ -45,6 +45,9 @@ func notebookExists(config *Config) bool {
 
 func apiCall(url string, method string, username string, password string, body io.Reader) *http.Response {
 	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		log.Fatalf("could not create request. method: [%s], url: [%s]", method, url)
+	}
 
 	if method == http.MethodPost {
 		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -90,7 +93,7 @@ func lookupNotebookId(config *Config) {
 	)
 
 	result := GetNotebooksResponse{}
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
 		err := json.NewDecoder(resp.Body).Decode(&result)
 
 		if err != nil {
