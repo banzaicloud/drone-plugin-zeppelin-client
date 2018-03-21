@@ -12,6 +12,7 @@ import (
 	"github.com/oliveagle/jsonpath"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/go-playground/validator.v9"
+	"time"
 )
 
 type (
@@ -43,7 +44,7 @@ func notebookExists(config *Config) bool {
 	return false
 }
 
-func apiCall(url string, method string, username string, password string, body io.Reader) *http.Response {
+func apiCall(url string, method string, username string, password string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		log.Fatalf("could not create request. method: [%s], url: [%s]", method, url)
@@ -60,10 +61,14 @@ func apiCall(url string, method string, username string, password string, body i
 	req.SetBasicAuth(username, password)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	var netClient = &http.Client{
+		//Timeout: time.Second * 1,
+	}
+	resp, err := netClient.Do(req)
 
 	if err != nil {
-		log.Fatalf("failed to call \"%s\" on %s: %+v", method, url, err)
+		log.Errorf("failed to call \"%s\" on %s: %+v", method, url, err)
+		return nil, err
 	}
 
 	debugReq, _ := httputil.DumpRequest(req, true)
@@ -72,12 +77,22 @@ func apiCall(url string, method string, username string, password string, body i
 	log.Debugf("Response %s", debugResp)
 
 	defer resp.Body.Close()
-	return resp
+	return resp, nil
 }
 
 func lookupNotebookId(config *Config) {
 	url := fmt.Sprintf("%s/api/notebook", config.Endpoint)
-	resp := apiCall(url, http.MethodGet, config.Username, config.Password, nil)
+
+	resp, err := apiCall(url, http.MethodGet, config.Username, config.Password, nil)
+	for i := 0; i < 10 && err != nil; i++ {
+		time.Sleep(5 * time.Second)
+		log.Infof("retry api call %d time(s)", i + 1)
+		resp, err = apiCall(url, http.MethodGet, config.Username, config.Password, nil)
+	}
+
+	if err != nil {
+		log.Fatalf("failed to lookup notebook %+v", err)
+	}
 
 	type (
 		NotebookData struct {
@@ -116,7 +131,7 @@ func lookupNotebookId(config *Config) {
 func deleteNotebook(config *Config) bool {
 	log.Infof("deleting notebook ...")
 	url := fmt.Sprintf("%s/api/notebook/%s", config.Endpoint, config.Notebook.Id)
-	resp := apiCall(url, http.MethodDelete, config.Username, config.Password, nil)
+	resp, _ := apiCall(url, http.MethodDelete, config.Username, config.Password, nil)
 
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("Notebook %s (%s) has been deleted", config.Notebook.Name, config.Notebook.Id)
@@ -142,7 +157,7 @@ func importNotebook(config *Config) bool {
 	}
 
 	url := fmt.Sprintf("%s/api/notebook/import", config.Endpoint)
-	resp := apiCall(url, http.MethodPost, config.Username, config.Password, bytes.NewBuffer(notebookData))
+	resp, _ := apiCall(url, http.MethodPost, config.Username, config.Password, bytes.NewBuffer(notebookData))
 
 	if resp.StatusCode == http.StatusOK {
 		//var result = map[string] string{}
@@ -184,7 +199,7 @@ func runNotebook(config *Config) bool {
 
 	log.Infof("Running notebook ...")
 	url := fmt.Sprintf("%s/api/notebook/job/%s?waitToFinish=false", config.Endpoint, config.Notebook.Id)
-	resp := apiCall(url, http.MethodPost, config.Username, config.Password, nil)
+	resp, _ := apiCall(url, http.MethodPost, config.Username, config.Password, nil)
 
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("Notebook %s (%s) has been started", config.Notebook.Name, config.Notebook.Id)
@@ -198,7 +213,7 @@ func notebookInProgress(config *Config) bool {
 
 	log.Infof("Checking notebook status ...")
 	url := fmt.Sprintf("%s/api/notebook/job/%s", config.Endpoint, config.Notebook.Id)
-	resp := apiCall(url, http.MethodGet, config.Username, config.Password, nil)
+	resp, _ := apiCall(url, http.MethodGet, config.Username, config.Password, nil)
 	if resp.StatusCode != http.StatusOK {
 		return false
 	}
